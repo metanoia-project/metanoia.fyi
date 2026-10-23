@@ -7,11 +7,6 @@ const BASE_HEX = '0x2105';
 const RPC = 'https://mainnet.base.org';
 const DROP_TO = '0x98c0Bb4dc2BaE6D33267910c5F1bD3EbA06a84db';
 
-function toDataUri(metadata) {
-  const json = JSON.stringify(metadata);
-  return 'data:application/json;base64,' + btoa(unescape(encodeURIComponent(json)));
-}
-
 function explain(error) {
   const message = error?.shortMessage || error?.message || String(error);
   if (/already exists/i.test(message)) return 'this face already exists';
@@ -75,27 +70,11 @@ export async function mintFace({ web3Auth, walletClient, address, username, trai
     });
     if (owned !== 0n) throw new Error('this wallet already has a face');
 
-    const nextId = await publicClient.readContract({
-      address: FACE_ADDRESS,
-      abi: FACE_ABI,
-      functionName: 'nextId',
-    });
-    const uri = toDataUri({
-      name: username,
-      description: 'Metanoia face. Once.',
-      image: `https://metanoia.fyi/nft/${nextId}.png`,
-      image_data: image,
-      external_url: 'https://metanoia.fyi',
-      attributes: Object.entries(traits)
-        .filter(([, value]) => value)
-        .map(([trait_type, value]) => ({ trait_type, value })),
-    });
-
     const hash = await walletClient.writeContract({
       address: FACE_ADDRESS,
       abi: FACE_ABI,
       functionName: 'mint',
-      args: [on, color, uri],
+      args: [on, color, image],
       account: address,
       chain: base,
     });

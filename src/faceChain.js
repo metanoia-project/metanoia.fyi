@@ -9,27 +9,26 @@ export const FACE_EXPLORER = `https://basescan.org/nft/${FACE_ADDRESS}`;
 export async function readTokenImage(id) {
   if (!id) return null;
   const publicClient = createPublicClient({ chain: base, transport: http(RPC) });
+  try {
+    const data = await publicClient.readContract({
+      address: FACE_ADDRESS,
+      abi: FACE_ABI,
+      functionName: 'imageData',
+      args: [BigInt(id)],
+    });
+    if (data && data.startsWith('data:image')) return data;
+  } catch {
+    /* old contract without imageData */
+  }
   const uri = await publicClient.readContract({
     address: FACE_ADDRESS,
     abi: FACE_ABI,
     functionName: 'tokenURI',
     args: [BigInt(id)],
   });
-  let json = uri;
-  if (uri.startsWith('data:application/json;base64,')) {
-    json = atob(uri.slice('data:application/json;base64,'.length));
-  } else if (uri.startsWith('data:application/json,')) {
-    json = decodeURIComponent(uri.slice('data:application/json,'.length));
-  } else if (uri.startsWith('http')) {
-    const res = await fetch(uri);
-    json = await res.text();
-  }
-  try {
-    const meta = JSON.parse(json);
-    return meta.image || null;
-  } catch {
-    return null;
-  }
+  if (uri.startsWith('data:image')) return uri;
+  if (uri.startsWith('http')) return `https://metanoia.fyi/nft/${id}.png`;
+  return null;
 }
 
 export async function readFaceId(address) {
