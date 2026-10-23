@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useWeb3Auth, useWeb3AuthConnect } from '@web3auth/modal/react';
-import { useAccount } from 'wagmi';
+import { useAccount, useWalletClient } from 'wagmi';
 import { SLOTS, normalize, paint, pngDataUrl } from '../avatar.js';
 import { getAvatar, getTokenId, getUsername, patchProfile } from '../username.js';
 import { mintFace } from '../mintFace.js';
@@ -10,6 +10,7 @@ export default function Face() {
   const { isConnected } = useWeb3AuthConnect();
   const { web3Auth } = useWeb3Auth();
   const { address } = useAccount();
+  const { data: walletClient } = useWalletClient();
   const canvasRef = useRef(null);
   const kept = useRef({});
   const [traits, setTraits] = useState(() => normalize({}));
@@ -19,7 +20,6 @@ export default function Face() {
 
   const username = getUsername(address);
   const avatar = getAvatar(address);
-  const provider = web3Auth?.provider || web3Auth?.connection?.ethereumProvider;
 
   useEffect(() => {
     const saved = getAvatar(address);
@@ -93,7 +93,8 @@ export default function Face() {
           try {
             const image = await pngDataUrl(traits);
             const minted = await mintFace({
-              provider,
+              web3Auth,
+              walletClient,
               address,
               username,
               traits,

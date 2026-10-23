@@ -1,6 +1,6 @@
-import { createPublicClient, decodeEventLog, encodeFunctionData, http } from 'viem';
+import { createPublicClient, decodeEventLog, http } from 'viem';
 import { sepolia } from 'viem/chains';
-import { FACE_ABI, FACE_ADDRESS, FACE_BYTECODE, FACE_FACTORY, FACE_SALT } from './faceArtifact.js';
+import { FACE_ABI, FACE_ADDRESS } from './faceArtifact.js';
 import { packTraits } from './facePack.js';
 
 const SEPOLIA_HEX = '0xaa36a7';
@@ -18,73 +18,25 @@ function explain(error) {
   if (/insufficient funds|INSUFFICIENT/i.test(message)) {
     return 'Need Sepolia ETH on this wallet';
   }
+  if (/torus|trouble connecting/i.test(message)) {
+    return 'Wallet could not reach Sepolia. Try again.';
+  }
   return message;
 }
 
-async function ensureSepolia(provider) {
-  try {
-    await provider.request({
-      method: 'wallet_switchEthereumChain',
-      params: [{ chainId: SEPOLIA_HEX }],
-    });
-  } catch {
-    await provider.request({
-      method: 'wallet_addEthereumChain',
-      params: [
-        {
-          chainId: SEPOLIA_HEX,
-          chainName: 'Sepolia',
-          nativeCurrency: { name: 'Sepolia ETH', symbol: 'ETH', decimals: 18 },
-          rpcUrls: [RPC],
-          blockExplorerUrls: ['https://sepolia.etherscan.io'],
-        },
-      ],
-    });
-  }
-}
-
-async function waitReceipt(provider, hash) {
-  for (let i = 0; i < 80; i += 1) {
-    const receipt = await provider.request({
-      method: 'eth_getTransactionReceipt',
-      params: [hash],
-    });
-    if (receipt) return receipt;
-    await new Promise((r) => setTimeout(r, 1500));
-  }
-  throw new Error('mint timeout');
-}
-
-async function send(provider, tx) {
-  const hash = await provider.request({
-    method: 'eth_sendTransaction',
-    params: [tx],
-  });
-  const receipt = await waitReceipt(provider, hash);
-  if (receipt.status !== '0x1') throw new Error('tx failed');
-  return { hash, receipt };
-}
-
-export async function mintFace({ provider, address, username, traits, image }) {
+export async function mintFace({ web3Auth, walletClient, address, username, traits, image }) {
   if (!address) throw new Error('No wallet');
-  if (!provider) throw new Error('No wallet');
+  if (!walletClient) throw new Error('No wallet');
 
   try {
     const publicClient = createPublicClient({ chain: sepolia, transport: http(RPC) });
-    const balance = await publicClient.getBalance({ address });
-    if (balance === 0n) {
-      throw new Error('Need Sepolia ETH on this wallet');
-    }
 
-    await ensureSepolia(provider);
-
-    const code = await publicClient.getCode({ address: FACE_ADDRESS });
-    if (!code || code === '0x') {
-      await send(provider, {
-        from: address,
-        to: FACE_FACTORY,
-        data: FACE_SALT + FACE_BYTECODE.slice(2),
-      });
+    try {
+      if (web3Auth?.switchChain) {
+        await web3Auth.switchChain({ chainId: SEPOLIA_HEX });
+      }
+    } catch {
+      /* already on Sepolia, or dashboard RPC will take the mint */
     }
 
     const { on, color } = packTraits(traits);
@@ -119,19 +71,19 @@ export async function mintFace({ provider, address, username, traits, image }) {
         .map(([trait_type, value]) => ({ trait_type, value })),
     });
 
-    const data = encodeFunctionData({
+    const hash = await walletClient.writeContract({
+      address: FACE_ADDRESS,
       abi: FACE_ABI,
       functionName: 'mint',
       args: [on, color, uri],
+      account: address,
+      chain: sepolia,
     });
-    const { hash, receipt } = await send(provider, {
-      from: address,
-      to: FACE_ADDRESS,
-      data,
-    });
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    if (receipt.status !== 'success') throw new Error('mint failed');
 
     let tokenId = null;
-    for (const log of receipt.logs || []) {
+    for (const log of receipt.logs) {
       try {
         const parsed = decodeEventLog({
           abi: FACE_ABI,
