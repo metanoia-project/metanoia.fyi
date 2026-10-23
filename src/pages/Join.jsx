@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { useWeb3AuthConnect, useWeb3AuthDisconnect } from '@web3auth/modal/react';
-import { useAccount } from 'wagmi';
+import { useWeb3Auth, useWeb3AuthConnect, useWeb3AuthDisconnect } from '@web3auth/modal/react';
+import { useAccount, useWalletClient } from 'wagmi';
 import { Link, Navigate } from 'react-router-dom';
 import { paint } from '../avatar.js';
 import { FACE_EXPLORER, readFaceId, readTokenImage } from '../faceChain.js';
+import { dropFace } from '../mintFace.js';
 import { getAvatar, getUsername, parseUsername, patchProfile, setUsername } from '../username.js';
 
 function FacePreview({ traits }) {
@@ -17,12 +18,15 @@ function FacePreview({ traits }) {
 export default function Join() {
   const { connect, loading, isConnected, error } = useWeb3AuthConnect();
   const { disconnect } = useWeb3AuthDisconnect();
+  const { web3Auth } = useWeb3Auth();
   const { address } = useAccount();
+  const { data: walletClient } = useWalletClient();
   const [saved, setSaved] = useState(null);
   const [draft, setDraft] = useState('');
   const [formError, setFormError] = useState('');
   const [chainId, setChainId] = useState(undefined);
   const [tokenImage, setTokenImage] = useState(null);
+  const [busy, setBusy] = useState(false);
 
   const username =
     address && saved?.address === address.toLowerCase()
@@ -141,6 +145,27 @@ export default function Join() {
           Basescan
         </a>
         <p className="soon">{address}</p>
+        {formError ? <p className="soon">{formError}</p> : null}
+        <button
+          className="join"
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            setFormError('');
+            try {
+              await dropFace({ web3Auth, walletClient, address, tokenId });
+              patchProfile(address, { tokenId: null, avatar: getAvatar(address) });
+              setTokenImage(null);
+              setChainId(null);
+            } catch (e) {
+              setFormError(e.message || String(e));
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? '…' : 'Drop this face'}
+        </button>
         <button className="join" type="button" onClick={() => disconnect()}>
           Leave
         </button>

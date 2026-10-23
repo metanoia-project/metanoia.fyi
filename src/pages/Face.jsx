@@ -40,7 +40,7 @@ export default function Face() {
 
   return (
     <main className="studio">
-      <p className="soon">Create digital yourself.</p>
+      <p className="soon">Create digital yourself. A dropped look cannot be minted again.</p>
       <div className="avatar-stage">
         <canvas ref={canvasRef} className="avatar-canvas" width="512" height="512" />
         <div className="avatar-menu">
