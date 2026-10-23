@@ -16,7 +16,7 @@ contract MetanoiaFace {
     mapping(address => uint256) public balanceOf;
     mapping(address => uint256) public faceOf;
     mapping(bytes32 => uint256) public idByHash;
-    mapping(uint256 => string) private _tokenURI;
+    mapping(uint256 => string) public imageData;
     mapping(uint256 => address) private _tokenApprovals;
     mapping(address => mapping(address => bool)) private _operatorApprovals;
 
@@ -46,14 +46,31 @@ contract MetanoiaFace {
         faceOf[msg.sender] = id;
         balanceOf[msg.sender] = 1;
         idByHash[look] = id;
-        _tokenURI[id] = uri;
+        imageData[id] = uri;
         emit Transfer(address(0), msg.sender, id);
         return id;
     }
 
     function tokenURI(uint256 id) external view returns (string memory) {
         require(ownerOf[id] != address(0), "none");
-        return _tokenURI[id];
+        return string.concat("https://metanoia.fyi/nft/", _toString(id), ".json");
+    }
+
+    function _toString(uint256 value) private pure returns (string memory) {
+        if (value == 0) return "0";
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits--;
+            buffer[digits] = bytes1(uint8(48 + (value % 10)));
+            value /= 10;
+        }
+        return string(buffer);
     }
 
     function approve(address to, uint256 id) external {

@@ -6,19 +6,8 @@ import { FACE_ABI, FACE_ADDRESS } from '../src/faceArtifact.js';
 const RPC = 'https://mainnet.base.org';
 const DIR = new URL('../public/nft/', import.meta.url);
 
-function decodeUri(uri) {
-  if (uri.startsWith('data:application/json;base64,')) {
-    return Buffer.from(uri.slice('data:application/json;base64,'.length), 'base64').toString('utf8');
-  }
-  if (uri.startsWith('data:application/json,')) {
-    return decodeURIComponent(uri.slice('data:application/json,'.length));
-  }
-  return uri;
-}
-
-function pngFromMeta(meta) {
-  const src = meta.image_data || meta.image || '';
-  if (!src.startsWith('data:image/png;base64,')) return null;
+function pngFromData(src) {
+  if (!src || !src.startsWith('data:image/png;base64,')) return null;
   return Buffer.from(src.slice('data:image/png;base64,'.length), 'base64');
 }
 
@@ -38,21 +27,23 @@ const nextId = await publicClient.readContract({
 await mkdir(DIR, { recursive: true });
 
 for (let id = 1n; id < nextId; id++) {
-  const uri = await publicClient.readContract({
+  const image = await publicClient.readContract({
     address: FACE_ADDRESS,
     abi: FACE_ABI,
-    functionName: 'tokenURI',
+    functionName: 'imageData',
     args: [id],
   });
-  let meta = {};
-  try {
-    meta = JSON.parse(decodeUri(uri));
-  } catch {
-    continue;
-  }
-  const png = pngFromMeta(meta);
+  const png = pngFromData(image);
   if (!png) continue;
-  const file = new URL(`${id}.png`, DIR);
-  await writeFile(file, png);
-  console.log('wrote', file.pathname, png.length);
+  await writeFile(new URL(`${id}.png`, DIR), png);
+  await writeFile(
+    new URL(`${id}.json`, DIR),
+    `${JSON.stringify({
+      name: `FACE #${id}`,
+      description: 'Metanoia face. Once.',
+      image: `https://metanoia.fyi/nft/${id}.png`,
+      external_url: 'https://metanoia.fyi',
+    })}\n`,
+  );
+  console.log('wrote', String(id), png.length);
 }
