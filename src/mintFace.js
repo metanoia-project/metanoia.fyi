@@ -75,10 +75,16 @@ export async function mintFace({ web3Auth, walletClient, address, username, trai
     });
     if (owned !== 0n) throw new Error('this wallet already has a face');
 
+    const nextId = await publicClient.readContract({
+      address: FACE_ADDRESS,
+      abi: FACE_ABI,
+      functionName: 'nextId',
+    });
     const uri = toDataUri({
       name: username,
       description: 'Metanoia face. Once.',
-      image,
+      image: `https://metanoia.fyi/nft/${nextId}.png`,
+      image_data: image,
       external_url: 'https://metanoia.fyi',
       attributes: Object.entries(traits)
         .filter(([, value]) => value)
