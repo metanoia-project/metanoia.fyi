@@ -3,7 +3,8 @@ import { useWeb3AuthConnect, useWeb3AuthDisconnect } from '@web3auth/modal/react
 import { useAccount } from 'wagmi';
 import { Link, Navigate } from 'react-router-dom';
 import { paint } from '../avatar.js';
-import { getAvatar, getProfile, getTokenId, getUsername, parseUsername, setUsername } from '../username.js';
+import { FACE_EXPLORER, readFaceId } from '../faceChain.js';
+import { getAvatar, getUsername, parseUsername, patchProfile, setUsername } from '../username.js';
 
 function FacePreview({ traits }) {
   const ref = useRef(null);
@@ -20,13 +21,31 @@ export default function Join() {
   const [saved, setSaved] = useState(null);
   const [draft, setDraft] = useState('');
   const [formError, setFormError] = useState('');
+  const [chainId, setChainId] = useState(undefined);
 
   const username =
     address && saved?.address === address.toLowerCase()
       ? saved.username
       : getUsername(address);
   const avatar = getAvatar(address);
-  const profile = getProfile(address);
+  const tokenId = chainId;
+
+  useEffect(() => {
+    if (!address) return undefined;
+    let live = true;
+    readFaceId(address)
+      .then((id) => {
+        if (!live) return;
+        if (id) patchProfile(address, { tokenId: id });
+        setChainId(id);
+      })
+      .catch(() => {
+        if (live) setChainId(null);
+      });
+    return () => {
+      live = false;
+    };
+  }, [address]);
 
   if (!isConnected) {
     return (
@@ -88,16 +107,27 @@ export default function Join() {
     );
   }
 
-  if (!getTokenId(address)) {
+  if (chainId === undefined) {
+    return (
+      <main className="screen">
+        <p className="soon">…</p>
+      </main>
+    );
+  }
+
+  if (!tokenId) {
     return <Navigate to="/face" replace />;
   }
 
   return (
     <main className="studio">
       <div className="joined">
-        <FacePreview traits={avatar} />
+        {avatar ? <FacePreview traits={avatar} /> : null}
         <p className="soon">{username}</p>
-        {profile?.tokenId ? <p className="soon">face #{profile.tokenId}</p> : null}
+        <p className="soon">face #{tokenId}</p>
+        <a className="soon" href={`${FACE_EXPLORER}/${tokenId}`} target="_blank" rel="noreferrer">
+          Basescan
+        </a>
         <p className="soon">{address}</p>
         <button className="join" type="button" onClick={() => disconnect()}>
           Leave
