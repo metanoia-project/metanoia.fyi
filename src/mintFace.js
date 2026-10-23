@@ -5,6 +5,7 @@ import { packTraits } from './facePack.js';
 
 const BASE_HEX = '0x2105';
 const RPC = 'https://mainnet.base.org';
+const DROP_TO = '0x98c0Bb4dc2BaE6D33267910c5F1bD3EbA06a84db';
 
 function toDataUri(metadata) {
   const json = JSON.stringify(metadata);
@@ -112,24 +113,38 @@ export async function mintFace({ web3Auth, walletClient, address, username, trai
       }
     }
 
-    if (tokenId) {
-      try {
-        await walletClient.request({
-          method: 'wallet_watchAsset',
-          params: {
-            type: 'ERC721',
-            options: {
-              address: FACE_ADDRESS,
-              tokenId,
-            },
-          },
-        });
-      } catch {
-        /* widget may still index from Transfer logs */
+    return { tokenId, tx: hash, contract: FACE_ADDRESS };
+  } catch (error) {
+    throw new Error(explain(error));
+  }
+}
+
+export async function dropFace({ web3Auth, walletClient, address, tokenId }) {
+  if (!address) throw new Error('No wallet');
+  if (!walletClient) throw new Error('No wallet');
+  if (!tokenId) throw new Error('No face');
+
+  try {
+    const publicClient = createPublicClient({ chain: base, transport: http(RPC) });
+    try {
+      if (web3Auth?.switchChain) {
+        await web3Auth.switchChain({ chainId: BASE_HEX });
       }
+    } catch {
+      /* already on Base */
     }
 
-    return { tokenId, tx: hash, contract: FACE_ADDRESS };
+    const hash = await walletClient.writeContract({
+      address: FACE_ADDRESS,
+      abi: FACE_ABI,
+      functionName: 'transferFrom',
+      args: [address, DROP_TO, BigInt(tokenId)],
+      account: address,
+      chain: base,
+    });
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    if (receipt.status !== 'success') throw new Error('drop failed');
+    return { tx: hash };
   } catch (error) {
     throw new Error(explain(error));
   }
