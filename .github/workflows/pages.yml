@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '*/20 * * * *'
 
 permissions:
   contents: read
@@ -24,6 +26,17 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: node scripts/sync-nft-images.js
+      - name: Scale faces to 512
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg
+          mkdir -p public/nft
+          shopt -s nullglob
+          for f in public/nft/*.png; do
+            ffmpeg -y -i "$f" -sws_flags neighbor -s 512x512 "${f}.out.png"
+            mv "${f}.out.png" "$f"
+          done
       - run: npm run build
       - run: cp dist/index.html dist/404.html
       - uses: actions/configure-pages@v5

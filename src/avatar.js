@@ -204,5 +204,11 @@ export async function paint(canvas, traits) {
 
 export async function pngDataUrl(traits) {
   const work = await compose(traits);
-  return work.toDataURL('image/png');
+  const out = document.createElement('canvas');
+  out.width = VIEW;
+  out.height = VIEW;
+  const ctx = out.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(work, 0, 0, VIEW, VIEW);
+  return out.toDataURL('image/png');
 }
