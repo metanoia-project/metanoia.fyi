@@ -4,7 +4,7 @@ import { useAccount } from 'wagmi';
 import { Link, Navigate } from 'react-router-dom';
 import { paint } from '../avatar.js';
 import { FACE_EXPLORER, readFaceId } from '../faceChain.js';
-import { getAvatar, getProfile, getTokenId, getUsername, parseUsername, patchProfile, setUsername } from '../username.js';
+import { getAvatar, getUsername, parseUsername, patchProfile, setUsername } from '../username.js';
 
 function FacePreview({ traits }) {
   const ref = useRef(null);
@@ -28,8 +28,7 @@ export default function Join() {
       ? saved.username
       : getUsername(address);
   const avatar = getAvatar(address);
-  const profile = getProfile(address);
-  const tokenId = getTokenId(address) || chainId || profile?.tokenId;
+  const tokenId = chainId;
 
   useEffect(() => {
     if (!address) return undefined;
@@ -108,7 +107,7 @@ export default function Join() {
     );
   }
 
-  if (chainId === undefined && !getTokenId(address)) {
+  if (chainId === undefined) {
     return (
       <main className="screen">
         <p className="soon">…</p>
@@ -127,7 +126,7 @@ export default function Join() {
         <p className="soon">{username}</p>
         <p className="soon">face #{tokenId}</p>
         <a className="soon" href={`${FACE_EXPLORER}/${tokenId}`} target="_blank" rel="noreferrer">
-          Sepolia Etherscan
+          Basescan
         </a>
         <p className="soon">{address}</p>
         <button className="join" type="button" onClick={() => disconnect()}>

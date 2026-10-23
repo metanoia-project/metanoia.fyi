@@ -1,10 +1,10 @@
 import { createPublicClient, decodeEventLog, http } from 'viem';
-import { sepolia } from 'viem/chains';
-import { FACE_ABI, FACE_ADDRESS } from './faceArtifact.js';
+import { base } from 'viem/chains';
+import { FACE_ABI, FACE_ADDRESS, FACE_BYTECODE, FACE_FACTORY, FACE_SALT } from './faceArtifact.js';
 import { packTraits } from './facePack.js';
 
-const SEPOLIA_HEX = '0xaa36a7';
-const RPC = 'https://sepolia.drpc.org';
+const BASE_HEX = '0x2105';
+const RPC = 'https://mainnet.base.org';
 
 function toDataUri(metadata) {
   const json = JSON.stringify(metadata);
@@ -16,10 +16,10 @@ function explain(error) {
   if (/already exists/i.test(message)) return 'this face already exists';
   if (/already minted/i.test(message)) return 'this wallet already has a face';
   if (/insufficient funds|INSUFFICIENT/i.test(message)) {
-    return 'Need Sepolia ETH on this wallet';
+    return 'Need a little Base ETH on this wallet';
   }
   if (/torus|trouble connecting/i.test(message)) {
-    return 'Wallet could not reach Sepolia. Try again.';
+    return 'Wallet could not reach Base. Enable Base in the Embedded Wallets dashboard, then try again.';
   }
   return message;
 }
@@ -29,14 +29,26 @@ export async function mintFace({ web3Auth, walletClient, address, username, trai
   if (!walletClient) throw new Error('No wallet');
 
   try {
-    const publicClient = createPublicClient({ chain: sepolia, transport: http(RPC) });
+    const publicClient = createPublicClient({ chain: base, transport: http(RPC) });
 
     try {
       if (web3Auth?.switchChain) {
-        await web3Auth.switchChain({ chainId: SEPOLIA_HEX });
+        await web3Auth.switchChain({ chainId: BASE_HEX });
       }
     } catch {
-      /* already on Sepolia, or dashboard RPC will take the mint */
+      /* already on Base, or dashboard RPC will take the mint */
+    }
+
+    const code = await publicClient.getCode({ address: FACE_ADDRESS });
+    if (!code || code === '0x') {
+      const deployHash = await walletClient.sendTransaction({
+        account: address,
+        chain: base,
+        to: FACE_FACTORY,
+        data: FACE_SALT + FACE_BYTECODE.slice(2),
+      });
+      const deployed = await publicClient.waitForTransactionReceipt({ hash: deployHash });
+      if (deployed.status !== 'success') throw new Error('deploy failed');
     }
 
     const { on, color } = packTraits(traits);
@@ -66,6 +78,7 @@ export async function mintFace({ web3Auth, walletClient, address, username, trai
       name: username,
       description: 'Metanoia face. Once.',
       image,
+      external_url: 'https://metanoia.fyi',
       attributes: Object.entries(traits)
         .filter(([, value]) => value)
         .map(([trait_type, value]) => ({ trait_type, value })),
@@ -77,7 +90,7 @@ export async function mintFace({ web3Auth, walletClient, address, username, trai
       functionName: 'mint',
       args: [on, color, uri],
       account: address,
-      chain: sepolia,
+      chain: base,
     });
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     if (receipt.status !== 'success') throw new Error('mint failed');
@@ -112,7 +125,7 @@ export async function mintFace({ web3Auth, walletClient, address, username, trai
           },
         });
       } catch {
-        /* Embedded Wallet NFT tab ignores custom Sepolia tokens */
+        /* widget may still index from Transfer logs */
       }
     }
 

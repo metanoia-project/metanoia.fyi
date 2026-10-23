@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useWeb3Auth, useWeb3AuthConnect } from '@web3auth/modal/react';
 import { useAccount, useWalletClient } from 'wagmi';
 import { SLOTS, normalize, paint, pngDataUrl } from '../avatar.js';
-import { getAvatar, getTokenId, getUsername, patchProfile } from '../username.js';
+import { getAvatar, getUsername, patchProfile } from '../username.js';
 import { mintFace } from '../mintFace.js';
 
 export default function Face() {
@@ -32,7 +32,7 @@ export default function Face() {
 
   if (!isConnected) return <Navigate to="/" replace />;
   if (address && !username) return <Navigate to="/join" replace />;
-  if (address && (getTokenId(address) || done)) return <Navigate to="/join" replace />;
+  if (address && done) return <Navigate to="/join" replace />;
 
   function setSlot(id, value) {
     setTraits((prev) => ({ ...prev, [id]: value }));
