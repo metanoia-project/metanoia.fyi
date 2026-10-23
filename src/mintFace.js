@@ -99,6 +99,23 @@ export async function mintFace({ web3Auth, walletClient, address, username, trai
       }
     }
 
+    if (tokenId) {
+      try {
+        await walletClient.request({
+          method: 'wallet_watchAsset',
+          params: {
+            type: 'ERC721',
+            options: {
+              address: FACE_ADDRESS,
+              tokenId,
+            },
+          },
+        });
+      } catch {
+        /* Embedded Wallet NFT tab ignores custom Sepolia tokens */
+      }
+    }
+
     return { tokenId, tx: hash, contract: FACE_ADDRESS };
   } catch (error) {
     throw new Error(explain(error));

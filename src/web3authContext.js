@@ -6,6 +6,13 @@ const web3AuthContextConfig = {
   web3AuthOptions: {
     clientId,
     web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
+    defaultChainId: '0xaa36a7',
+    walletServicesConfig: {
+      whiteLabel: {
+        hideNftDisplay: false,
+        defaultPortfolio: 'nft',
+      },
+    },
     uiConfig: {
       appName: 'Μετάνοια',
       mode: 'dark',
