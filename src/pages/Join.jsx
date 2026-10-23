@@ -3,7 +3,7 @@ import { useWeb3AuthConnect, useWeb3AuthDisconnect } from '@web3auth/modal/react
 import { useAccount } from 'wagmi';
 import { Link, Navigate } from 'react-router-dom';
 import { paint } from '../avatar.js';
-import { FACE_EXPLORER, readFaceId } from '../faceChain.js';
+import { FACE_EXPLORER, readFaceId, readTokenImage } from '../faceChain.js';
 import { getAvatar, getUsername, parseUsername, patchProfile, setUsername } from '../username.js';
 
 function FacePreview({ traits }) {
@@ -22,6 +22,7 @@ export default function Join() {
   const [draft, setDraft] = useState('');
   const [formError, setFormError] = useState('');
   const [chainId, setChainId] = useState(undefined);
+  const [tokenImage, setTokenImage] = useState(null);
 
   const username =
     address && saved?.address === address.toLowerCase()
@@ -36,7 +37,12 @@ export default function Join() {
     readFaceId(address)
       .then((id) => {
         if (!live) return;
-        if (id) patchProfile(address, { tokenId: id });
+        if (id) {
+          patchProfile(address, { tokenId: id });
+          readTokenImage(id).then((image) => {
+            if (live) setTokenImage(image);
+          });
+        }
         setChainId(id);
       })
       .catch(() => {
@@ -122,7 +128,13 @@ export default function Join() {
   return (
     <main className="studio">
       <div className="joined">
-        {avatar ? <FacePreview traits={avatar} /> : null}
+        {tokenImage ? (
+          <img className="avatar-canvas" src={tokenImage} alt="" />
+        ) : avatar ? (
+          <FacePreview traits={avatar} />
+        ) : (
+          <img className="avatar-canvas" src={`/nft/${tokenId}.png`} alt="" />
+        )}
         <p className="soon">{username}</p>
         <p className="soon">face #{tokenId}</p>
         <a className="soon" href={`${FACE_EXPLORER}/${tokenId}`} target="_blank" rel="noreferrer">
