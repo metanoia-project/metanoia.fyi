@@ -26,7 +26,7 @@ export async function readTokenImage(id) {
   }
   try {
     const meta = JSON.parse(json);
-    return meta.image || null;
+    return meta.image_data || meta.image || null;
   } catch {
     return null;
   }
