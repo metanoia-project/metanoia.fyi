@@ -4,7 +4,7 @@ import { FACE_ABI, FACE_ADDRESS } from './faceArtifact.js';
 import { packTraits } from './facePack.js';
 
 const SEPOLIA_HEX = '0xaa36a7';
-const RPC = 'https://ethereum-sepolia-rpc.publicnode.com';
+const RPC = 'https://sepolia.drpc.org';
 
 function toDataUri(metadata) {
   const json = JSON.stringify(metadata);
