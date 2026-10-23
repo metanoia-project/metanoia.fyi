@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useWeb3AuthConnect } from '@web3auth/modal/react';
+import { useWeb3Auth, useWeb3AuthConnect } from '@web3auth/modal/react';
 import { useAccount } from 'wagmi';
 import { SLOTS, normalize, paint, pngDataUrl } from '../avatar.js';
-import { getAvatar, getUsername, patchProfile } from '../username.js';
+import { getAvatar, getTokenId, getUsername, patchProfile } from '../username.js';
 import { mintFace } from '../mintFace.js';
 
 export default function Face() {
   const { isConnected } = useWeb3AuthConnect();
+  const { web3Auth } = useWeb3Auth();
   const { address } = useAccount();
   const canvasRef = useRef(null);
   const kept = useRef({});
@@ -18,6 +19,7 @@ export default function Face() {
 
   const username = getUsername(address);
   const avatar = getAvatar(address);
+  const provider = web3Auth?.provider || web3Auth?.connection?.ethereumProvider;
 
   useEffect(() => {
     const saved = getAvatar(address);
@@ -30,7 +32,7 @@ export default function Face() {
 
   if (!isConnected) return <Navigate to="/" replace />;
   if (address && !username) return <Navigate to="/join" replace />;
-  if (address && (avatar || done)) return <Navigate to="/join" replace />;
+  if (address && (getTokenId(address) || done)) return <Navigate to="/join" replace />;
 
   function setSlot(id, value) {
     setTraits((prev) => ({ ...prev, [id]: value }));
@@ -91,6 +93,7 @@ export default function Face() {
           try {
             const image = await pngDataUrl(traits);
             const minted = await mintFace({
+              provider,
               address,
               username,
               traits,

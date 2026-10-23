@@ -3,7 +3,7 @@ import { useWeb3AuthConnect, useWeb3AuthDisconnect } from '@web3auth/modal/react
 import { useAccount } from 'wagmi';
 import { Link, Navigate } from 'react-router-dom';
 import { paint } from '../avatar.js';
-import { getAvatar, getProfile, getUsername, parseUsername, setUsername } from '../username.js';
+import { getAvatar, getProfile, getTokenId, getUsername, parseUsername, setUsername } from '../username.js';
 
 function FacePreview({ traits }) {
   const ref = useRef(null);
@@ -88,7 +88,7 @@ export default function Join() {
     );
   }
 
-  if (!avatar) {
+  if (!getTokenId(address)) {
     return <Navigate to="/face" replace />;
   }
 
