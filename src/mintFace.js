@@ -11,6 +11,11 @@ function toDataUri(metadata) {
   return 'data:application/json;base64,' + btoa(unescape(encodeURIComponent(json)));
 }
 
+function isLocalApp() {
+  const host = window.location.hostname;
+  return host === 'localhost' || host === '127.0.0.1';
+}
+
 function localChain() {
   const rpc = `${window.location.origin}/hardhat`;
   return defineChain({
@@ -22,8 +27,10 @@ function localChain() {
 }
 
 export async function mintFace({ address, username, traits, image }) {
-  if (!FACE_ADDRESS) throw new Error('No face contract');
   if (!address) throw new Error('No wallet');
+  if (!isLocalApp() || !FACE_ADDRESS) {
+    return { skipped: true };
+  }
 
   const chain = localChain();
   const transport = http(chain.rpcUrls.default.http[0]);

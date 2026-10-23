@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useWeb3AuthConnect } from '@web3auth/modal/react';
 import { useAccount } from 'wagmi';
 import { SLOTS, normalize, paint, pngDataUrl } from '../avatar.js';
-import { getAvatar, getTokenId, getUsername, patchProfile } from '../username.js';
+import { getAvatar, getUsername, patchProfile } from '../username.js';
 import { mintFace } from '../mintFace.js';
 
 export default function Face() {
@@ -17,7 +17,7 @@ export default function Face() {
   const [error, setError] = useState('');
 
   const username = getUsername(address);
-  const tokenId = getTokenId(address);
+  const avatar = getAvatar(address);
 
   useEffect(() => {
     const saved = getAvatar(address);
@@ -30,7 +30,7 @@ export default function Face() {
 
   if (!isConnected) return <Navigate to="/" replace />;
   if (address && !username) return <Navigate to="/join" replace />;
-  if (address && (tokenId || done)) return <Navigate to="/join" replace />;
+  if (address && (avatar || done)) return <Navigate to="/join" replace />;
 
   function setSlot(id, value) {
     setTraits((prev) => ({ ...prev, [id]: value }));
@@ -98,9 +98,9 @@ export default function Face() {
             });
             patchProfile(address, {
               avatar: traits,
-              tokenId: minted.tokenId,
-              tx: minted.tx,
-              contract: minted.contract,
+              tokenId: minted.tokenId || null,
+              tx: minted.tx || null,
+              contract: minted.contract || null,
             });
             setDone(true);
           } catch (e) {
