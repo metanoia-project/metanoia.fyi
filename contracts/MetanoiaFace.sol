@@ -29,7 +29,7 @@ contract MetanoiaFace {
     }
 
     function contractURI() external pure returns (string memory) {
-        return "https://metanoia.fyi/face.json";
+        return 'data:application/json,{"name":"Metanoia Face","description":"One face. Unique look. Minted once."}';
     }
 
     function hashFace(bool[9] memory on, bytes3[9] memory color) public pure returns (bytes32) {
@@ -53,7 +53,13 @@ contract MetanoiaFace {
 
     function tokenURI(uint256 id) external view returns (string memory) {
         require(ownerOf[id] != address(0), "none");
-        return string.concat("https://metanoia.fyi/nft/", _toString(id), ".json");
+        return string.concat(
+            'data:application/json,{"name":"FACE #',
+            _toString(id),
+            '","description":"Metanoia face. Once.","image":"',
+            imageData[id],
+            '"}'
+        );
     }
 
     function _toString(uint256 value) private pure returns (string memory) {
