@@ -27,6 +27,15 @@ export async function readTokenImage(id) {
     args: [BigInt(id)],
   });
   if (uri.startsWith('data:image')) return uri;
+  if (uri.startsWith('data:application/json')) {
+    const json = uri.includes(',') ? uri.slice(uri.indexOf(',') + 1) : '';
+    try {
+      const meta = JSON.parse(decodeURIComponent(json));
+      if (meta?.image) return meta.image;
+    } catch {
+      /* malformed on-chain json */
+    }
+  }
   if (uri.startsWith('http')) return `https://metanoia.fyi/nft/${id}.png`;
   return null;
 }
